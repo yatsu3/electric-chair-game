@@ -1,99 +1,101 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import socket from './socket';
 import './App.css';
 
 function App() {
   const [status, setStatus] = useState('サーバーに接続中...');
-  const [connected, setConnected] = useState(false);
-  const [seatChoice, setSeatChoice] = useState(null);        // 自分が座るイス
-  const [electricTrap, setElectricTrap] = useState(null);    // 相手に電流を仕掛けるイス
-  const [submitted, setSubmitted] = useState(false);         // 送信済みフラグ
+  const [role, setRole] = useState(null);
+  const roleRef = useRef(role); // 追加
   const [myPoints, setMyPoints] = useState(0);
   const [myShocks, setMyShocks] = useState(0);
+  const [selectedNumber, setSelectedNumber] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [disabledSeats, setDisabledSeats] = useState([]);
+
+  useEffect(() => {
+  roleRef.current = role;
+}, [role]);
+
 
   useEffect(() => {
     socket.on('connect', () => {
-      console.log('✅ サーバーと接続成功');
-      setConnected(true);
       setStatus('相手を待っています...');
     });
 
-    socket.on('bothReady', () => {
-      setStatus('両者準備完了！イスを選んでください。');
+    socket.on('yourTurnToTrap', () => {
+      setRole('trapSetter');
+      setStatus('⚡ 電流を仕掛けるイスを選んでください');
+      setSelectedNumber(null);
+    });
+
+    socket.on('yourTurnToSit', () => {
+      setRole('sitter');
+      setStatus('💺 座るイスを選んでください');
+      setSelectedNumber(null);
+    });
+
+    socket.on('waitForOpponent', () => {
+      setRole(null);
+      setStatus('相手の行動を待っています...');
     });
 
     socket.on('roundResult', (result) => {
-      // 結果受信
+      console.log("result" , result);
       setStatus(result.message);
       setMyPoints(result.points);
       setMyShocks(result.shocks);
-      setSubmitted(false);
-      setSeatChoice(null);
-      setElectricTrap(null);
+      setIsSubmitting(false);
+      setSelectedNumber(null);
+      // 得点が入った椅子を無効化（trapを回避＝成功時）
+      if (
+        roleRef.current === 'sitter' &&
+        result.selectedSeat !== undefined &&
+        !result.message.includes('失敗')
+      ) {
+        console.log("disabled seat:", result.selectedSeat);
+        setDisabledSeats(prev => [...new Set([...prev, result.selectedSeat])]);
+      }
     });
 
     socket.on('gameOver', (data) => {
       setStatus(`ゲーム終了！${data.winner === 'you' ? 'あなたの勝ち！' : '負けました...'}`);
-      setSubmitted(true);
+      setRole(null);
+      setIsSubmitting(true);
     });
 
-    return () => {
-      socket.off();
-    };
+    return () => socket.off();
   }, []);
 
   const handleSubmit = () => {
-    console.log("handleSubmit");
-    if (seatChoice && electricTrap) {
-      console.log("handleSubmit2");
-      socket.emit('submitChoice', {
-        seat: seatChoice,
-        trap: electricTrap,
-      });
-      console.log("handleSubmit3");
-      setSubmitted(true);
-      setStatus('相手の選択を待っています...');
+    if (!selectedNumber || isSubmitting) return;
+    if (role === 'trapSetter') {
+      socket.emit('setTrap', selectedNumber);
+      setStatus('相手が座るのを待っています...');
+    } else if (role === 'sitter') {
+      socket.emit('setSeat', selectedNumber);
+      setStatus('結果を待っています...');
     }
+    setIsSubmitting(true);
   };
 
-  const renderSeats = () => {
-    const seats = [];
+  const renderButtons = () => {
+    const buttons = [];
     for (let i = 1; i <= 12; i++) {
-      seats.push(
+      buttons.push(
         <button
           key={i}
-          disabled={submitted}
-          onClick={() => setSeatChoice(i)}
+          disabled={isSubmitting || (disabledSeats.includes(i))}
+          onClick={() => setSelectedNumber(i)}
           style={{
             margin: '4px',
-            backgroundColor: seatChoice === i ? 'skyblue' : 'white',
+            backgroundColor: selectedNumber === i ? (role === 'trapSetter' ? 'yellow' : 'skyblue') : 'white',
           }}
         >
           {i}
         </button>
       );
     }
-    return seats;
-  };
-
-  const renderTraps = () => {
-    const traps = [];
-    for (let i = 1; i <= 12; i++) {
-      traps.push(
-        <button
-          key={i}
-          disabled={submitted}
-          onClick={() => setElectricTrap(i)}
-          style={{
-            margin: '4px',
-            backgroundColor: electricTrap === i ? 'tomato' : 'white',
-          }}
-        >
-          {i}
-        </button>
-      );
-    }
-    return traps;
+    return buttons;
   };
 
   return (
@@ -101,19 +103,17 @@ function App() {
       <h2>⚡ 電気イスゲーム ⚡</h2>
       <p>{status}</p>
 
-      <div style={{ marginBottom: '16px' }}>
-        <h4>座りたいイスを選んでください:</h4>
-        {renderSeats()}
-      </div>
-
-      <div style={{ marginBottom: '16px' }}>
-        <h4>電流を仕掛けたいイスを選んでください:</h4>
-        {renderTraps()}
-      </div>
-
-      <button onClick={handleSubmit} disabled={!seatChoice || !electricTrap || submitted}>
-        選択を送信
-      </button>
+      {role && (
+        <>
+          <div style={{ marginBottom: '16px' }}>
+            <h4>{role === 'trapSetter' ? '電流を仕掛けるイスを選んでください:' : '座るイスを選んでください:'}</h4>
+            {renderButtons()}
+          </div>
+          <button onClick={handleSubmit} disabled={!selectedNumber || isSubmitting}>
+            {role === 'trapSetter' ? '電流セット' : '座る！'}
+          </button>
+        </>
+      )}
 
       <hr />
       <p>あなたのポイント: {myPoints}</p>
