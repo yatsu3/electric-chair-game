@@ -46,11 +46,13 @@ function App() {
       setMyShocks(result.shocks);
       setIsSubmitting(false);
       setSelectedNumber(null);
+      setDisabledSeats(result.disabledSeats);
       // 得点が入った椅子を無効化（trapを回避＝成功時）
       if (
         roleRef.current === 'sitter' &&
         result.selectedSeat !== undefined &&
-        !result.message.includes('失敗')
+        !result.message.includes('失敗') &&
+        !result.message.includes('電流を食らった')
       ) {
         console.log("disabled seat:", result.selectedSeat);
         setDisabledSeats(prev => [...new Set([...prev, result.selectedSeat])]);

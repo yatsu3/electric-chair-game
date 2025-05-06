@@ -11,6 +11,7 @@ const io = new Server(server, {
 const players = {};
 let playerSockets = [];
 let currentTurn = 0; // 0 または 1 を示す
+const disabledSeats = [];
 
 function resetGameState() {
   players[playerSockets[0]] = { points: 0, shocks: 0 };
@@ -50,18 +51,25 @@ io.on('connection', (socket) => {
       messageToSitter = `😌 電流回避！${seatNumber}点獲得。`;
     }
 
+    // 無効化する座席をサーバー側で管理
+    if (seatNumber !== trap) {
+      disabledSeats.push(seatNumber);
+    }
+
     io.to(sitter).emit('roundResult', {
       message: messageToSitter,
       points: players[sitter].points,
       shocks: players[sitter].shocks,
-      selectedSeat: seatNumber
+      selectedSeat: seatNumber,
+      disabledSeats,
     });
 
     io.to(trapSetter).emit('roundResult', {
       message: `相手は ${seatNumber} に座りました。${seatNumber === trap ? '成功！電流を食らわせた！' : '失敗！外されました。'}`,
       points: players[trapSetter].points,
       shocks: players[trapSetter].shocks,
-      selectedSeat: seatNumber
+      selectedSeat: seatNumber,
+      disabledSeats,
     });
 
     // ゲーム終了判定
