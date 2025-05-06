@@ -3,3 +3,8 @@ body {
   background-color: #f9f9f9;
   text-align: center;
 }
+
+textarea {
+  height: 50px;
+  width: 400px;
+}

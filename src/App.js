@@ -11,6 +11,9 @@ function App() {
   const [selectedNumber, setSelectedNumber] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [disabledSeats, setDisabledSeats] = useState([]);
+  const [comment, setComment] = useState('');
+  const [opponentComment, setOpponentComment] = useState('');
+
 
   useEffect(() => {
   roleRef.current = role;
@@ -28,10 +31,12 @@ function App() {
       setSelectedNumber(null);
     });
 
-    socket.on('yourTurnToSit', () => {
+    socket.on('yourTurnToSit', (data) => {
+      console.log("yourturntosit:", data);
       setRole('sitter');
       setStatus('💺 座るイスを選んでください');
       setSelectedNumber(null);
+      setOpponentComment(data.comment || '');
     });
 
     socket.on('waitForOpponent', () => {
@@ -71,8 +76,9 @@ function App() {
   const handleSubmit = () => {
     if (!selectedNumber || isSubmitting) return;
     if (role === 'trapSetter') {
-      socket.emit('setTrap', selectedNumber);
+      socket.emit('setTrap', { trapSeat: selectedNumber, comment });
       setStatus('相手が座るのを待っています...');
+      setComment(''); // 送信後クリア
     } else if (role === 'sitter') {
       socket.emit('setSeat', selectedNumber);
       setStatus('結果を待っています...');
@@ -111,6 +117,12 @@ function App() {
             <h4>{role === 'trapSetter' ? '電流を仕掛けるイスを選んでください:' : '座るイスを選んでください:'}</h4>
             {renderButtons()}
           </div>
+          {role === 'trapSetter' ? <div><h4>相手に送るコメント</h4><textarea value={comment} onChange={(e) => setComment(e.target.value)} placeholder="今回はかなり迷いました。" maxLength="30"></textarea></div> : ''}
+          {role === 'sitter' && opponentComment && (
+  <div style={{ marginBottom: '12px', padding: '8px', border: '1px solid gray', borderRadius: '4px', backgroundColor: '#f9f9f9' }}>
+    相手からのコメント: 「{opponentComment}」
+  </div>
+)}
           <button onClick={handleSubmit} disabled={!selectedNumber || isSubmitting}>
             {role === 'trapSetter' ? '電流セット' : '座る！'}
           </button>

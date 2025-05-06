@@ -28,12 +28,13 @@ io.on('connection', (socket) => {
     startTurn();
   }
 
-  socket.on('setTrap', (trapSeat) => {
+  socket.on('setTrap', ({trapSeat, comment}) => {
     const trapSetter = playerSockets[currentTurn];
     const sitter = playerSockets[1 - currentTurn];
     players[trapSetter].trap = trapSeat;
+    console.log("setTrap:", comment);
 
-    io.to(sitter).emit('yourTurnToSit');
+    io.to(sitter).emit('yourTurnToSit', {comment});
   });
 
   socket.on('setSeat', (seatNumber) => {
