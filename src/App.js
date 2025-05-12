@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import socket from './socket';
+import socket from './socket.js';
 import './App.css';
+import { useNavigate } from 'react-router-dom';
 
 function App() {
   const [status, setStatus] = useState('サーバーに接続中...');
@@ -14,6 +15,11 @@ function App() {
   const [comment, setComment] = useState('');
   const [opponentComment, setOpponentComment] = useState('');
 
+  const [screen, setScreen] = useState('home');
+  const [roomId, setRoomId] = useState('');
+
+  const navigate = useNavigate();
+
 
   useEffect(() => {
   roleRef.current = role;
@@ -23,6 +29,27 @@ function App() {
   useEffect(() => {
     socket.on('connect', () => {
       setStatus('相手を待っています...');
+    });
+
+    socket.onAny((event, ...args) => {
+      console.log("📥 socket.onAny", event, args);
+    });
+
+    socket.on('roomCreated', (roomId) => {
+      console.log("roomcreated", roomId);
+      navigate('/create-room', {state: roomId});
+      console.log("部屋作成完了");
+      setRoomId(roomId);
+    })
+
+    socket.on('gameReady', () => {
+      console.log("ゲームスタート");
+      setScreen('game');
+    })
+
+    socket.on('errorMessage', (msg) => {
+      alert(msg);
+      setScreen('home');
     });
 
     socket.on('yourTurnToTrap', () => {
@@ -108,7 +135,27 @@ function App() {
 
   return (
     <div style={{ padding: '20px' }}>
-      <h2>⚡ 電気イスゲーム ⚡</h2>
+
+
+{screen === 'join' && (
+  <>
+    <h3>ルームに参加</h3>
+    <input value={roomId} onChange={e => setRoomId(e.target.value)} placeholder="ルームID" />
+    <button onClick={socket.emit('joinRoom', roomId)}>参加</button>
+  </>
+)}
+
+{screen === 'waiting' && (
+  <>
+    <h3>ルームID: {roomId}</h3>
+    <p>友達にこのIDを教えてね！</p>
+    <p>相手が参加するのを待っています...</p>
+  </>
+)}
+
+{screen === 'game' && (
+  <>
+  <h2>⚡ 電気イスゲーム ⚡</h2>
       <p>{status}</p>
 
       {role && (
@@ -131,7 +178,9 @@ function App() {
 
       <hr />
       <p>あなたのポイント: {myPoints}</p>
-      <p>電流を受けた回数: {myShocks} / 3</p>
+      <p>電流を受けた回数: {myShocks} / 3</p>)
+      </>)}
+      
     </div>
   );
 }
