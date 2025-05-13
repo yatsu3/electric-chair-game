@@ -1,10 +1,18 @@
 import socket from "../socket.js";
-import {useRef} from 'react';
+import {useRef, useEffect} from 'react';
+import { useNavigate } from 'react-router-dom';
 const EnterRoom = () => {
+    const navigate = useNavigate();
+    useEffect(() => {
+        socket.on('gameReady', () => {
+            navigate("/battle");
+          })
+    },[]);
     const inputRef = useRef("");
-    const roomId = "";
+    let roomId = "";
 
     const joinRoom = () => {
+        console.log("[client]--joinRoom--");
         roomId = inputRef.current.value;
         if (roomId) {
             socket.emit('joinRoom', roomId);

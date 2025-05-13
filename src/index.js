@@ -10,16 +10,14 @@ import { Routes, Route, BrowserRouter } from 'react-router-dom';
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
-  <React.StrictMode>
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<Top />} />
-        <Route path="/aa" element={<App />} />
+        <Route path="/battle" element={<App />} />
         <Route path="/enter-room" element={<EnterRoom />} />
         <Route path="/create-room" element={<CreateRoom />} />
       </Routes>
     </BrowserRouter>
-  </React.StrictMode>
 );
 
 reportWebVitals();

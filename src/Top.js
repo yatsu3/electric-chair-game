@@ -3,12 +3,12 @@ import {useEffect} from 'react';
 import {useNavigate} from 'react-router-dom';
 
 function Top() {
+    // const roomId = "";
     const navigate = useNavigate();
     useEffect(() => {
         socket.on('roomCreated', (roomId) => {
-            console.log("roomcreated", roomId);
+            console.log("[client]--roomCreated--", roomId);
             navigate('/create-room', {state: roomId});
-            console.log("部屋作成完了");
           })
     },[]);
 

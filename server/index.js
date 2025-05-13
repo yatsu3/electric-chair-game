@@ -26,6 +26,7 @@ function resetGameState() {
 }
 
 const rooms = {};
+let roomId = "";
 
 
 io.on('connection', (socket) => {
@@ -34,14 +35,16 @@ io.on('connection', (socket) => {
 
   // ルーム作成時の処理
   socket.on('createRoom', () => {
-    console.log("createRoom");
-    const roomId = uuidv4().slice(0,10); // ランダムなルームIDを作成
-    console.log("roomId", roomId);
+    console.log("[server]--createRoom--");
+    roomId = uuidv4().slice(0,10); // ランダムなルームIDを作成
+    console.log("roomId:", roomId);
     rooms[roomId] = [socket.id]; // 作成したルームにソケットIDを登録
+    console.log("rooms:", rooms);
+    console.log("rooms[roomId]", rooms[roomId]);
     players[socket.id] = {points: 0, shocks: 0, roomId}; // プレイヤー情報を登録
+    console.log("現在のプレイヤー:", players);
     socket.join(roomId); // 作成したルームIDに参加
     socket.emit('roomCreated', roomId); // イベント発火
-    console.log("emit comp");
   });
 
   socket.onAny((event, ...args) => {
@@ -49,23 +52,24 @@ io.on('connection', (socket) => {
   });
 
   // ルームに入る時の処理
-  socket.on('joinRoom', ({roomId}) => {
-    console.log("joinroom");
-    const room = rooms[roomId];　// 入力したルームID
-    // ルームの有効性チェック
-    if(!room || room.length >=2) {
-      socket.emit('errorMessage', 'ルームが存在しないか満員です');
-      return;
-    }
+  socket.on('joinRoom', (roomId) => {
+    console.log("[server]--joinRoom--:", roomId);
+    const room = rooms[roomId];　// ルームに入ってるソケット情報
+    console.log("現在のルーム:", room);
     room.push(socket.id); // ソケットIDをルームに追加
+    console.log('ルームに２つのsocketIDが入っている', room);
     players[socket.id] = { points: 0, shocks: 0, roomId}; // プレイヤー情報を登録
+
     socket.join(roomId); // ルームに参加
 
     // 両者に通知
     if(checkConnection) {
+      // alert("両者揃いました!");
       io.to(roomId).emit('gameReady');
       resetGameState();
       startTurn(roomId);
+    } else {
+      alert("部屋が誤っているか相手が退出しました。再度やり直してください。");
     }
   })
 
@@ -77,6 +81,10 @@ io.on('connection', (socket) => {
   // }
 
   socket.on('setTrap', ({trapSeat, comment}) => {
+    console.log("[server]--setTrap--");
+    console.log("trapSeat:", trapSeat);
+    console.log("comment:", comment);
+    console.log("currentTurn:", currentTurn);
     const trapSetter = playerSockets[currentTurn];
     const sitter = playerSockets[1 - currentTurn];
     players[trapSetter].trap = trapSeat;
@@ -86,8 +94,12 @@ io.on('connection', (socket) => {
   });
 
   socket.on('setSeat', (seatNumber) => {
+    console.log("[server]--setSeat--");
+    console.log("座った椅子:", seatNumber)
     const trapSetter = playerSockets[currentTurn];
     const sitter = playerSockets[1 - currentTurn];
+    console.log("trapsetter:", trapSetter);
+    console.log("sitter:", sitter);
     const trap = players[trapSetter].trap;
 
     let messageToSitter;
@@ -138,8 +150,12 @@ io.on('connection', (socket) => {
     }
 
     setTimeout(() => {
-      currentTurn = 1 - currentTurn;
-      startTurn();
+      console.log("currentTurnBefore:", currentTurn);
+      // currentTurn = 1 - currentTurn;
+      currentTurn = currentTurn === 1 ? 0 : 1;
+
+      console.log("currentTurnAfter:", currentTurn);
+      startTurn(roomId);
     }, 3000); // 3秒結果を見せてから次のターン
 
 
@@ -147,27 +163,42 @@ io.on('connection', (socket) => {
 
   socket.on('disconnect', () => {
     console.log(`⛔ 切断: ${socket.id}`);
+    console.log("testBefore", rooms[roomId]);
     playerSockets = playerSockets.filter(id => id !== socket.id);
     delete players[socket.id];
+    console.log("testAfter", rooms[roomId]);
+
+    rooms[roomId] = rooms[roomId].filter(id => id !== socket.id);
+    // 部屋が空になったら削除
+    if (rooms[roomId].length === 0) {
+      delete rooms[roomId];
+      console.log(`🗑️ ルーム削除: ${roomId}`);
+      console.log("現在の部屋:", rooms);
+    }
     io.emit('status', '相手が切断しました。リロードして再接続してください。');
   });
 });
 
 function checkConnection() {
-  if (playerSockets.length === 2) return true;
+  if (playerSockets.length === 2 && room.length === 2) return true;
   return false;
 }
 
 function startTurn(roomId) {
+  console.log("startTurn", roomId);
   // const trapSetter = playerSockets[currentTurn];
   // const sitter = playerSockets[1 - currentTurn];
   // io.to(trapSetter).emit('yourTurnToTrap');
   // io.to(sitter).emit('waitForOpponent');
 
   const [player1, player2] = rooms[roomId];
-  const currentTurn = Math.floor(Math.random() * 2);
+  // const currentTurn = Math.floor(Math.random() * 2);
+  console.log("currentTurn:", currentTurn);
   const trapSetter = currentTurn === 0 ? player1 : player2;
   const sitter = currentTurn === 0 ? player2 : player1;
+
+  console.log("trap", trapSetter);
+  console.log("sitter", sitter);
 
   players[trapSetter].turn = 'trapSetter';
   players[sitter].turn = 'sitter';

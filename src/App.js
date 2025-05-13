@@ -42,11 +42,6 @@ function App() {
       setRoomId(roomId);
     })
 
-    socket.on('gameReady', () => {
-      console.log("ゲームスタート");
-      setScreen('game');
-    })
-
     socket.on('errorMessage', (msg) => {
       alert(msg);
       setScreen('home');
@@ -70,6 +65,10 @@ function App() {
       setRole(null);
       setStatus('相手の行動を待っています...');
     });
+
+    socket.on('status', (result) => {
+      alert(result);
+    })
 
     socket.on('roundResult', (result) => {
       console.log("result" , result);
@@ -101,12 +100,15 @@ function App() {
   }, []);
 
   const handleSubmit = () => {
-    if (!selectedNumber || isSubmitting) return;
+    if (!selectedNumber || isSubmitting) return; // 何も選んでいない場合
+
     if (role === 'trapSetter') {
+      // 電気を仕掛ける側
       socket.emit('setTrap', { trapSeat: selectedNumber, comment });
       setStatus('相手が座るのを待っています...');
       setComment(''); // 送信後クリア
     } else if (role === 'sitter') {
+      // 椅子に座る側
       socket.emit('setSeat', selectedNumber);
       setStatus('結果を待っています...');
     }
@@ -136,24 +138,6 @@ function App() {
   return (
     <div style={{ padding: '20px' }}>
 
-
-{screen === 'join' && (
-  <>
-    <h3>ルームに参加</h3>
-    <input value={roomId} onChange={e => setRoomId(e.target.value)} placeholder="ルームID" />
-    <button onClick={socket.emit('joinRoom', roomId)}>参加</button>
-  </>
-)}
-
-{screen === 'waiting' && (
-  <>
-    <h3>ルームID: {roomId}</h3>
-    <p>友達にこのIDを教えてね！</p>
-    <p>相手が参加するのを待っています...</p>
-  </>
-)}
-
-{screen === 'game' && (
   <>
   <h2>⚡ 電気イスゲーム ⚡</h2>
       <p>{status}</p>
@@ -178,8 +162,8 @@ function App() {
 
       <hr />
       <p>あなたのポイント: {myPoints}</p>
-      <p>電流を受けた回数: {myShocks} / 3</p>)
-      </>)}
+      <p>電流を受けた回数: {myShocks} / 3</p>
+      </>
       
     </div>
   );

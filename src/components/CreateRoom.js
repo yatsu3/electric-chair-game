@@ -1,10 +1,18 @@
 import { useLocation} from 'react-router-dom';
+import {useEffect} from 'react';
+import socket from "../socket.js";
+import { useNavigate } from 'react-router-dom';
 
 const CreateRoom = () => {
+    const navigate = useNavigate();
+    useEffect(() => {
+        socket.on('gameReady', () => {
+            navigate("/battle");
+          })
+    },[]);
     const location = useLocation();
-    console.log('location', location);
     const roomId = location.state;
-    console.log("aaa", roomId);
+    console.log("[client]ルーム作成完了!");
     return (
         <>
             <h3>ルームID: {roomId}</h3>
