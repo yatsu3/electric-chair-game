@@ -7,9 +7,14 @@ const CreateRoom = () => {
     const navigate = useNavigate();
     useEffect(() => {
         socket.on('gameReady', () => {
-            navigate("/battle");
+            alert("相手とマッチしました！");
+            throw2();
           })
     },[]);
+
+    const throw2 = () => {
+        navigate("/battle");
+    }
     const location = useLocation();
     const roomId = location.state;
     console.log("[client]ルーム作成完了!");

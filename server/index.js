@@ -20,8 +20,14 @@ const disabledSeats = [];
 
 
 function resetGameState() {
+  console.log("disabeldSeatsBefore:", disabledSeats);
+  // プレイヤーの点数情報をリセット
   players[playerSockets[0]] = { points: 0, shocks: 0 };
   players[playerSockets[1]] = { points: 0, shocks: 0 };
+  // 椅子の情報をリセット
+  disabledSeats.splice(0);
+  console.log("disabeldSeatsAfter:", disabledSeats);
+
   currentTurn = 0;
 }
 
@@ -36,19 +42,15 @@ io.on('connection', (socket) => {
   // ルーム作成時の処理
   socket.on('createRoom', () => {
     console.log("[server]--createRoom--");
-    roomId = uuidv4().slice(0,10); // ランダムなルームIDを作成
+    roomId = createRoomId();
     console.log("roomId:", roomId);
     rooms[roomId] = [socket.id]; // 作成したルームにソケットIDを登録
     console.log("rooms:", rooms);
     console.log("rooms[roomId]", rooms[roomId]);
-    players[socket.id] = {points: 0, shocks: 0, roomId}; // プレイヤー情報を登録
+    players[socket.id] = registerPlayerInfo(roomId);
     console.log("現在のプレイヤー:", players);
     socket.join(roomId); // 作成したルームIDに参加
     socket.emit('roomCreated', roomId); // イベント発火
-  });
-
-  socket.onAny((event, ...args) => {
-    console.log("📤 サーバー受信:", event, args);
   });
 
   // ルームに入る時の処理
@@ -149,6 +151,12 @@ io.on('connection', (socket) => {
       }
     }
 
+    socket.on('retryGame', () => {
+      console.log("retryGame:roomId:", roomId);
+      resetGameState();
+      startTurn(roomId);
+    });
+
     setTimeout(() => {
       console.log("currentTurnBefore:", currentTurn);
       // currentTurn = 1 - currentTurn;
@@ -158,26 +166,41 @@ io.on('connection', (socket) => {
       startTurn(roomId);
     }, 3000); // 3秒結果を見せてから次のターン
 
-
   });
 
   socket.on('disconnect', () => {
-    console.log(`⛔ 切断: ${socket.id}`);
-    console.log("testBefore", rooms[roomId]);
-    playerSockets = playerSockets.filter(id => id !== socket.id);
-    delete players[socket.id];
-    console.log("testAfter", rooms[roomId]);
+    if (roomId === null) {
 
-    rooms[roomId] = rooms[roomId].filter(id => id !== socket.id);
-    // 部屋が空になったら削除
-    if (rooms[roomId].length === 0) {
-      delete rooms[roomId];
-      console.log(`🗑️ ルーム削除: ${roomId}`);
-      console.log("現在の部屋:", rooms);
-    }
-    io.emit('status', '相手が切断しました。リロードして再接続してください。');
+    } else {
+      console.log(`⛔ 切断: ${socket.id}`);
+      console.log("roomId", roomId);
+      console.log("testBefore", rooms[roomId]);
+      playerSockets = playerSockets.filter(id => id !== socket.id);
+      delete players[socket.id];
+      console.log("testAfter", rooms[roomId]);
+  
+      rooms[roomId] = rooms[roomId].filter(id => id !== socket.id);
+      // 部屋が空になったら削除
+      if (rooms[roomId].length === 0) {
+        delete rooms[roomId];
+        console.log(`🗑️ ルーム削除: ${roomId}`);
+        console.log("現在の部屋:", rooms);
+      }
+      io.emit('status', '相手が切断しました。リロードして再接続してください。');
+      }
   });
 });
+
+  // ランダムなルームIDを作成
+  const createRoomId = () => {
+    return uuidv4().slice(0,10);
+  }
+
+  // プレイヤー情報を登録
+  const registerPlayerInfo = (roomId) => {
+    return {points: 0, shocks: 0, roomId};
+  }
+
 
 function checkConnection() {
   if (playerSockets.length === 2 && room.length === 2) return true;
@@ -185,6 +208,8 @@ function checkConnection() {
 }
 
 function startTurn(roomId) {
+  console.log("rooms:", rooms);
+  console.log("rooms:", rooms[roomId]);
   console.log("startTurn", roomId);
   // const trapSetter = playerSockets[currentTurn];
   // const sitter = playerSockets[1 - currentTurn];

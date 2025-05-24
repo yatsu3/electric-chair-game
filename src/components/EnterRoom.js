@@ -4,10 +4,10 @@ import { useNavigate } from 'react-router-dom';
 const EnterRoom = () => {
     const navigate = useNavigate();
     useEffect(() => {
-        socket.on('gameReady', () => {
+        socket.on('gameReady',async () => {
             navigate("/battle");
           })
-    },[]);
+    });
     const inputRef = useRef("");
     let roomId = "";
 
@@ -20,6 +20,7 @@ const EnterRoom = () => {
             alert('ルームIDを入力してください');
         }
     }
+
     return (
         <>
             <h3>ルームに参加</h3>

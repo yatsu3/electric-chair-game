@@ -14,6 +14,7 @@ function App() {
   const [disabledSeats, setDisabledSeats] = useState([]);
   const [comment, setComment] = useState('');
   const [opponentComment, setOpponentComment] = useState('');
+  const [isFinished, setIsFinished] = useState(false);
 
   const [screen, setScreen] = useState('home');
   const [roomId, setRoomId] = useState('');
@@ -36,7 +37,6 @@ function App() {
     });
 
     socket.on('roomCreated', (roomId) => {
-      console.log("roomcreated", roomId);
       navigate('/create-room', {state: roomId});
       console.log("部屋作成完了");
       setRoomId(roomId);
@@ -94,6 +94,8 @@ function App() {
       setStatus(`ゲーム終了！${data.winner === 'you' ? 'あなたの勝ち！' : '負けました...'}`);
       setRole(null);
       setIsSubmitting(true);
+      setIsFinished(true);
+      
     });
 
     return () => socket.off();
@@ -117,6 +119,8 @@ function App() {
 
   const renderButtons = () => {
     const buttons = [];
+    console.log("isSubmitting:", isSubmitting);
+    console.log("disabledSeats:", disabledSeats);
     for (let i = 1; i <= 12; i++) {
       buttons.push(
         <button
@@ -134,6 +138,11 @@ function App() {
     }
     return buttons;
   };
+
+  const retryGame = () => {
+    console.log("clickretry");
+    socket.emit('joinRoom', roomId);
+  }
 
   return (
     <div style={{ padding: '20px' }}>
@@ -164,6 +173,7 @@ function App() {
       <p>あなたのポイント: {myPoints}</p>
       <p>電流を受けた回数: {myShocks} / 3</p>
       </>
+      {isFinished === true ? <><button onClick={retryGame}>もう一度遊ぶ</button><button>トップに戻る</button></>:<br></br>}
       
     </div>
   );
