@@ -22,8 +22,8 @@ const disabledSeats = [];
 function resetGameState() {
   console.log("disabeldSeatsBefore:", disabledSeats);
   // プレイヤーの点数情報をリセット
-  players[playerSockets[0]] = { points: 0, shocks: 0 };
-  players[playerSockets[1]] = { points: 0, shocks: 0 };
+  players[playerSockets[0]] = { points: 0, shocks: 0, turn: null };
+  players[playerSockets[1]] = { points: 0, shocks: 0, turn: null };
   // 椅子の情報をリセット
   disabledSeats.splice(0);
   console.log("disabeldSeatsAfter:", disabledSeats);
@@ -56,11 +56,16 @@ io.on('connection', (socket) => {
   // ルームに入る時の処理
   socket.on('joinRoom', (roomId) => {
     console.log("[server]--joinRoom--:", roomId);
-    const room = rooms[roomId];　// ルームに入ってるソケット情報
+    let room = {};
+    room = rooms[roomId];　// ルームに入ってるソケット情報
     console.log("現在のルーム:", room);
+    if(!isExistRoom(room)) {
+      alert("部屋が存在しません。別のIDを入力してください。");
+      return;
+    }
     room.push(socket.id); // ソケットIDをルームに追加
     console.log('ルームに２つのsocketIDが入っている', room);
-    players[socket.id] = { points: 0, shocks: 0, roomId}; // プレイヤー情報を登録
+    players[socket.id] = registerPlayerInfo(roomId); // プレイヤー情報を登録
 
     socket.join(roomId); // ルームに参加
 
@@ -198,7 +203,7 @@ io.on('connection', (socket) => {
 
   // プレイヤー情報を登録
   const registerPlayerInfo = (roomId) => {
-    return {points: 0, shocks: 0, roomId};
+    return {points: 0, shocks: 0, turn: null, roomId};
   }
 
 
@@ -207,23 +212,37 @@ function checkConnection() {
   return false;
 }
 
+const isExistRoom = (room) => {
+  if (room == undefined) {
+    return false;
+  }
+
+  return true;
+}
+
 function startTurn(roomId) {
   console.log("rooms:", rooms);
-  console.log("rooms:", rooms[roomId]);
+  console.log("rooms[roomId]:", rooms[roomId]);
   console.log("startTurn", roomId);
-  // const trapSetter = playerSockets[currentTurn];
-  // const sitter = playerSockets[1 - currentTurn];
+  console.log("playerSockets", players);
+  let trapSetter = playerSockets[currentTurn];
+  let sitter = playerSockets[1 - currentTurn];
   // io.to(trapSetter).emit('yourTurnToTrap');
   // io.to(sitter).emit('waitForOpponent');
 
   const [player1, player2] = rooms[roomId];
   // const currentTurn = Math.floor(Math.random() * 2);
   console.log("currentTurn:", currentTurn);
-  const trapSetter = currentTurn === 0 ? player1 : player2;
-  const sitter = currentTurn === 0 ? player2 : player1;
-
-  console.log("trap", trapSetter);
+  console.log("player1", player1);
+  console.log("player2", player2);
+  console.log("trapsetter", trapSetter);
   console.log("sitter", sitter);
+
+
+  console.log("trapsetter", trapSetter);
+  console.log("sitter", sitter);
+
+  console.log("players", players);
 
   players[trapSetter].turn = 'trapSetter';
   players[sitter].turn = 'sitter';

@@ -48,6 +48,7 @@ function App() {
     });
 
     socket.on('yourTurnToTrap', () => {
+      console.log("yourTurnToTrap");
       setRole('trapSetter');
       setStatus('⚡ 電流を仕掛けるイスを選んでください');
       setSelectedNumber(null);
